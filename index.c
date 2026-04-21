@@ -229,7 +229,7 @@ int index_add(Index *index, const char *path) {
     }
 
     free(data);
-
+    
     if (index->count >= MAX_INDEX_ENTRIES) return -1;
 
     IndexEntry *e = &index->entries[index->count++];
@@ -241,6 +241,7 @@ int index_add(Index *index, const char *path) {
     e->size = (uint64_t)st.st_size;
     e->mtime_sec = 0;
     e->size = size;
+    e->hash = id;
     strncpy(e->path, path, sizeof(e->path) - 1);
 
     return index_save(index);
