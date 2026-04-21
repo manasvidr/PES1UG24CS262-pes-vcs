@@ -95,64 +95,68 @@ int object_exists(const ObjectID *id) {
 // Returns 0 on success, -1 on error.
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
     const char *type_str;
-
     if (type == OBJ_BLOB) type_str = "blob";
     else if (type == OBJ_TREE) type_str = "tree";
     else if (type == OBJ_COMMIT) type_str = "commit";
     else return -1;
-    
+
     char header[64];
     int header_len = snprintf(header, sizeof(header), "%s %zu", type_str, len) + 1;
-    
-    size_t total_len = header_len + len;
-    unsigned char *full_data = malloc(total_len);
-    if (!full_data) return -1;
 
-    memcpy(full_data, header, header_len);    
-    memcpy(full_data + header_len, data, len);
+    size_t full_len = header_len + len;
+    uint8_t *full = malloc(full_len);
+    if (!full) return -1;
 
-    ObjectID id;
-    compute_hash(full_data, total_len, id.hash);
+    memcpy(full, header, header_len);
+    memcpy(full + header_len, data, len);
 
-   if (object_exists(&id)) {
-        if (id_out) *id_out = id;
-        free(full_data);
+    compute_hash(full, full_len, id_out);
+
+    if (object_exists(id_out)) {
+        free(full);
         return 0;
     }
 
-    char path[512];
-    object_path(&id, path, sizeof(path));
+    char hex[HASH_HEX_SIZE + 1];
+    hash_to_hex(id_out, hex);
 
-    char dir[512];
-    snprintf(dir, sizeof(dir), "%s", path);
-    char *slash = strrchr(dir, '/');
-    if (slash) {
-        *slash = '\0';
-        mkdir(".pes", 0755);
-        mkdir(".pes/objects", 0755);
-        mkdir(dir, 0755);
+    char dir[64];
+    snprintf(dir, sizeof(dir), "%s/%.2s", OBJECTS_DIR, hex);
+    mkdir(dir, 0755);
+
+    char path[128];
+    snprintf(path, sizeof(path), "%s/%s", dir, hex + 2);
+
+    char tmp_path[160];
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path);
+
+    int fd = open(tmp_path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if (fd < 0) { free(full); return -1; }
+
+    if (write(fd, full, full_len) != (ssize_t)full_len) {
+        close(fd); unlink(tmp_path); free(full); return -1;
     }
 
-    int fd = open(path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-    if (fd < 0) {
-        free(full_data);
-        return -1;
+    if (fsync(fd) != 0) {
+        close(fd); unlink(tmp_path); free(full); return -1;
     }
 
-    if (write(fd, full_data, total_len) != (ssize_t)total_len) {
-        close(fd);
-        free(full_data);
-        return -1;
-    }
-
-    fsync(fd);
     close(fd);
+    free(full);
 
-    *id_out = id;
-    free(full_data);
+    if (rename(tmp_path, path) != 0) {
+        unlink(tmp_path);
+        return -1;
+    }
+
+    int dir_fd = open(dir, O_RDONLY);
+    if (dir_fd >= 0) {
+        fsync(dir_fd);
+        close(dir_fd);
+    }
+
     return 0;
 }    
-    
 // Read an object from the store.
 //
 // Steps:
