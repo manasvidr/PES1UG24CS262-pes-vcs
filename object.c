@@ -112,13 +112,14 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     memcpy(full_data + header_len, data, len);
 
     ObjectID id;
-    compute_hash(full_data, total_len, &id);
+    compute_hash(full_data, total_len, id.hash);
 
    if (object_exists(&id)) {
-        *id_out = id;
+        if (id_out) *id_out = id;
         free(full_data);
         return 0;
-   }
+    }
+
     char path[512];
     object_path(&id, path, sizeof(path));
 
