@@ -216,8 +216,7 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     strcpy(commit.author, pes_author());
     strcpy(commit.message, message);
 
-    time_t now = time(NULL);
-    snprintf(commit.timestamp, sizeof(commit.timestamp), "%ld", now);
+    commit.timestamp = (uint64_t) time(NULL);
 
     // Serialize
     void *data = NULL;
