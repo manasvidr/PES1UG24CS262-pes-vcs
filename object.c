@@ -113,8 +113,13 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 
     ObjectID id;
     compute_hash(full_data, total_len, &id);
+
+   if (object_exists(&id)) {
+        *id_out = id;
+        free(full_data);
+        return 0;
+   }
     
-    (void)id_out;
     return -1;
 }
 // Read an object from the store.
