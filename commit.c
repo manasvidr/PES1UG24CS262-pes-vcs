@@ -224,7 +224,7 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
 
     if (commit_serialize(&commit, &data, &len) != 0) return -1;
 
-    // 🔥 STEP 5 — Write object
+    // Write commit object
     if (object_write(OBJ_COMMIT, data, len, commit_id_out) != 0) {
         free(data);
         return -1;
@@ -232,5 +232,8 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
 
     free(data);
 
-    return -1; // next step will change this
+    // 🔥 STEP 6 — Update HEAD
+    if (head_update(commit_id_out) != 0) return -1;
+
+    return 0;
 }
