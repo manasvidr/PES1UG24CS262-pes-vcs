@@ -130,11 +130,6 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 //
 // Returns 0 on success, -1 on error.
 int tree_from_index(ObjectID *id_out) {
-    Index index;
-
-    if (index_load(&index) != 0) return -1;
-
-    qsort(index.entries, index.count, sizeof(IndexEntry), compare_index_entries);
-
-    return build_tree_level(index.entries, 0, index.count, 0, id_out);
+    (void)id_out;
+    return -1;
 }
