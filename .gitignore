@@ -1,4 +1,11 @@
-# Compiled binaries
+.pes/
+*.o
+pes
+test_tree
+test_objects
+file*.txt
+hello.txt
+bye.txt# Compiled binaries
 pes
 test_objects
 test_tree
