@@ -123,7 +123,7 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     object_path(&id, path, sizeof(path));
 
     char dir[512];
-    strncpy(dir, path, sizeof(dir));
+    snprintf(dir, sizeof(dir), "%s", path);
     char *slash = strrchr(dir, '/');
     if (slash) {
         *slash = '\0';
