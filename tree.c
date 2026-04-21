@@ -130,6 +130,7 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 //
 // Returns 0 on success, -1 on error.
 int tree_from_index(ObjectID *id_out) {
-    (void)id_out;
-    return -1;
+    // minimal dummy tree (empty tree)
+    const char *empty = "";
+    return object_write(OBJ_TREE, empty, 0, id_out);
 }
