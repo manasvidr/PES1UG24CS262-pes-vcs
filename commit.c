@@ -218,14 +218,19 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     commit.timestamp = time(NULL);
     commit.message = message;
 
-    // 🔥 STEP 4 — Serialize commit
+    // Serialize
     void *data = NULL;
     size_t len = 0;
 
     if (commit_serialize(&commit, &data, &len) != 0) return -1;
 
-    // next steps will use data
-    free(data);  // temporary cleanup for this step
+    // 🔥 STEP 5 — Write object
+    if (object_write(OBJ_COMMIT, data, len, commit_id_out) != 0) {
+        free(data);
+        return -1;
+    }
 
-    return -1;
+    free(data);
+
+    return -1; // next step will change this
 }
