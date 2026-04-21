@@ -134,6 +134,8 @@ int tree_from_index(ObjectID *id_out) {
 
     if (index_load(&index) != 0) return -1;
 
+    qsort(index.entries, index.count, sizeof(IndexEntry), compare_index_entries);
+
     (void)id_out;
     return -1;
 }
