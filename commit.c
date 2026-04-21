@@ -213,10 +213,11 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
         commit.has_parent = 0;
     }
 
-    commit.author = pes_author();
-    commit.committer = pes_author();
-    commit.timestamp = time(NULL);
-    commit.message = message;
+    strcpy(commit.author, pes_author());
+    strcpy(commit.message, message);
+
+    time_t now = time(NULL);
+    snprintf(commit.timestamp, sizeof(commit.timestamp), "%ld", now);
 
     // Serialize
     void *data = NULL;
