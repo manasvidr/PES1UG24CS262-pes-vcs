@@ -236,12 +236,21 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
 
     fclose(f);
 
-    // not used yet (next steps)
+    // Step 4: integrity check (hash verification)
+    ObjectID computed;
+    compute_hash(full, size, &computed);
+
+    if (memcmp(computed.hash, id->hash, HASH_SIZE) != 0) {
+        free(full);
+        return -1;
+    }
+
+    // not used yet (next step will use these)
     (void)type_out;
     (void)data_out;
     (void)len_out;
 
-    free(full); // avoid leak for now
+    free(full);
 
     return -1;
 }
