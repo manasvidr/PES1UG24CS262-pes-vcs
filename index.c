@@ -23,7 +23,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
-
+#include <errno.h>
+#include "pes.h"
+int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
 // ─── PROVIDED ────────────────────────────────────────────────────────────────
 
 // Find an index entry by path (linear scan).
@@ -139,7 +141,7 @@ int index_load(Index *index) {
 
     FILE *f = fopen(INDEX_FILE, "r");
     if (!f) {
-        if (errno == ENOENT) return 0;  // empty index is fine
+        if (errno == ENOENT) return 0;
         return -1;
     }
 
@@ -157,7 +159,7 @@ int index_load(Index *index) {
 
         if (ret != 5) break;
 
-        hex_to_hash(hex, &e->id);
+        hex_to_hash(hex, &e->hash);  
         index->count++;
     }
 
@@ -183,7 +185,7 @@ int index_save(const Index *index) {
     for (int i = 0; i < index->count; i++) {
         const IndexEntry *e = &index->entries[i];
 
-        hash_to_hex(&e->id, hex);
+        hash_to_hex(&e->hash, hex);  
 
         fprintf(f, "%o %s %llu %llu %s\n",
                 e->mode,
@@ -206,8 +208,37 @@ int index_save(const Index *index) {
 //
 // Returns 0 on success, -1 on error.
 int index_add(Index *index, const char *path) {
-    // TODO: Implement file staging
-    // (See Lab Appendix for logical steps)
-    (void)index; (void)path;
-    return -1;
+    FILE *f = fopen(path, "rb");
+    if (!f) return -1;
+
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    rewind(f);
+
+    void *data = malloc(size);
+    if (!data) { fclose(f); return -1; }
+
+    size_t nread = fread(data, 1, size, f);
+    if ((long)nread != size) { free(data); fclose(f); return -1; }
+    fclose(f);
+
+    ObjectID id;
+    if (object_write(OBJ_BLOB, data, size, &id) != 0) {
+        free(data);
+        return -1;
+    }
+
+    free(data);
+
+    if (index->count >= MAX_INDEX_ENTRIES) return -1;
+
+    IndexEntry *e = &index->entries[index->count++];
+
+    e->hash = id;   // 🔥 FIXED
+    e->mode = 0100644;
+    e->mtime_sec = 0;
+    e->size = size;
+    strncpy(e->path, path, sizeof(e->path) - 1);
+
+    return index_save(index);
 }
