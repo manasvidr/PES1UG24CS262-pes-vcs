@@ -236,7 +236,7 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
 
     fclose(f);
 
-    // Step 4: integrity check (hash verification)
+    // Step 4: integrity check
     ObjectID computed;
     compute_hash(full, size, &computed);
 
@@ -245,12 +245,39 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
         return -1;
     }
 
-    // not used yet (next step will use these)
-    (void)type_out;
-    (void)data_out;
-    (void)len_out;
+    // Step 5: parse header
+    uint8_t *nul = memchr(full, '\0', size);
+    if (!nul) {
+        free(full);
+        return -1;
+    }
+
+    // Determine type
+    if (strncmp((char *)full, "blob ", 5) == 0)
+        *type_out = OBJ_BLOB;
+    else if (strncmp((char *)full, "tree ", 5) == 0)
+        *type_out = OBJ_TREE;
+    else if (strncmp((char *)full, "commit ", 7) == 0)
+        *type_out = OBJ_COMMIT;
+    else {
+        free(full);
+        return -1;
+    }
+
+    // Extract data
+    size_t header_len = (nul - full) + 1;
+    *len_out = size - header_len;
+
+    *data_out = malloc(*len_out + 1);
+    if (!*data_out) {
+        free(full);
+        return -1;
+    }
+
+    memcpy(*data_out, full + header_len, *len_out);
+    ((uint8_t *)*data_out)[*len_out] = '\0';
 
     free(full);
 
-    return -1;
+    return 0;
 }
