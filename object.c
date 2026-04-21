@@ -100,9 +100,11 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     else if (type == OBJ_COMMIT) type_str = "commit";
     else return -1;
 
+    // Build header: "<type> <size>\0"
     char header[64];
     int header_len = snprintf(header, sizeof(header), "%s %zu", type_str, len) + 1;
 
+    // Combine header + data
     size_t full_len = header_len + len;
     uint8_t *full = malloc(full_len);
     if (!full) return -1;
@@ -110,45 +112,63 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     memcpy(full, header, header_len);
     memcpy(full + header_len, data, len);
 
+    // Compute hash
     compute_hash(full, full_len, id_out);
 
+    // Deduplication
     if (object_exists(id_out)) {
         free(full);
         return 0;
     }
 
+    // Convert hash to hex
     char hex[HASH_HEX_SIZE + 1];
     hash_to_hex(id_out, hex);
 
+    // Create shard directory (.pes/objects/XX)
     char dir[64];
     snprintf(dir, sizeof(dir), "%s/%.2s", OBJECTS_DIR, hex);
     mkdir(dir, 0755);
 
+    // Final path
     char path[128];
     snprintf(path, sizeof(path), "%s/%s", dir, hex + 2);
 
+    // Temporary file for atomic write
     char tmp_path[160];
     snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path);
 
     int fd = open(tmp_path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-    if (fd < 0) { free(full); return -1; }
+    if (fd < 0) {
+        free(full);
+        return -1;
+    }
 
-    if (write(fd, full, full_len) != (ssize_t)full_len) {
-        close(fd); unlink(tmp_path); free(full); return -1;
+    ssize_t written = write(fd, full, full_len);
+    if (written != (ssize_t)full_len) {
+        close(fd);
+        unlink(tmp_path);
+        free(full);
+        return -1;
     }
 
     if (fsync(fd) != 0) {
-        close(fd); unlink(tmp_path); free(full); return -1;
+        close(fd);
+        unlink(tmp_path);
+        free(full);
+        return -1;
     }
 
     close(fd);
     free(full);
 
+    // Atomic rename
     if (rename(tmp_path, path) != 0) {
         unlink(tmp_path);
         return -1;
     }
 
+    // fsync directory
     int dir_fd = open(dir, O_RDONLY);
     if (dir_fd >= 0) {
         fsync(dir_fd);
@@ -180,7 +200,11 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 // The caller is responsible for calling free(*data_out).
 // Returns 0 on success, -1 on error (file not found, corrupt, etc.).
 int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_t *len_out) {
-    // TODO: Implement
-    (void)id; (void)type_out; (void)data_out; (void)len_out;
+    char path[512];
+    object_path(id, path, sizeof(path));
+
+    (void)type_out;
+    (void)data_out;
+    (void)len_out;
     return -1;
 }
