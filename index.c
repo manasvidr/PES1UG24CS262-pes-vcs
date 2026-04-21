@@ -234,8 +234,11 @@ int index_add(Index *index, const char *path) {
 
     IndexEntry *e = &index->entries[index->count++];
 
-    e->hash = id;   // 🔥 FIXED
-    e->mode = 0100644;
+    struct stat st; 
+    if (stat(path, &st) != 0) return -1;
+
+    e->mtime_sec = (uint64_t)st.st_mtime;
+    e->size = (uint64_t)st.st_size;
     e->mtime_sec = 0;
     e->size = size;
     strncpy(e->path, path, sizeof(e->path) - 1);
