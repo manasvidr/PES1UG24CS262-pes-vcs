@@ -200,7 +200,25 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     ObjectID parent_id;
     int has_parent = (head_read(&parent_id) == 0);
 
-    (void)message;
-    (void)commit_id_out;
+    // 🔥 PUT YOUR CODE HERE
+    Commit commit;
+    memset(&commit, 0, sizeof(commit));
+
+    commit.tree = tree_id;
+
+    if (has_parent) {
+        commit.parent = parent_id;
+        commit.has_parent = 1;
+    } else {
+        commit.has_parent = 0;
+    }
+
+    commit.author = pes_author();
+    commit.committer = pes_author();
+    commit.timestamp = time(NULL);
+    commit.message = message;
+
+    // ⬇️ next step will go here (serialize)
+
     return -1;
 }
