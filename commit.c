@@ -200,7 +200,6 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     ObjectID parent_id;
     int has_parent = (head_read(&parent_id) == 0);
 
-    // Build commit struct
     Commit commit;
     memset(&commit, 0, sizeof(commit));
 
@@ -213,18 +212,16 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
         commit.has_parent = 0;
     }
 
-    strcpy(commit.author, pes_author());
-    strcpy(commit.message, message);
+    strncpy(commit.author, pes_author(), sizeof(commit.author) - 1);
+    strncpy(commit.message, message, sizeof(commit.message) - 1);
 
     commit.timestamp = (uint64_t) time(NULL);
 
-    // Serialize
     void *data = NULL;
     size_t len = 0;
 
     if (commit_serialize(&commit, &data, &len) != 0) return -1;
 
-    // Write commit object
     if (object_write(OBJ_COMMIT, data, len, commit_id_out) != 0) {
         free(data);
         return -1;
@@ -232,7 +229,6 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
 
     free(data);
 
-    // 🔥 STEP 6 — Update HEAD
     if (head_update(commit_id_out) != 0) return -1;
 
     return 0;
