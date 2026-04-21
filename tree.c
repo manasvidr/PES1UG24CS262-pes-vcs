@@ -136,6 +136,5 @@ int tree_from_index(ObjectID *id_out) {
 
     qsort(index.entries, index.count, sizeof(IndexEntry), compare_index_entries);
 
-    (void)id_out;
-    return -1;
+    return build_tree_level(index.entries, 0, index.count, 0, id_out);
 }
