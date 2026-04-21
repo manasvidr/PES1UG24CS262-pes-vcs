@@ -200,16 +200,48 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 // The caller is responsible for calling free(*data_out).
 // Returns 0 on success, -1 on error (file not found, corrupt, etc.).
 int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_t *len_out) {
+    // Step 1: build path
     char path[512];
     object_path(id, path, sizeof(path));
 
+    // Step 2: open file
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
 
+    // Step 3: read full file into memory
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return -1;
+    }
+
+    long size = ftell(f);
+    if (size < 0) {
+        fclose(f);
+        return -1;
+    }
+
+    rewind(f);
+
+    uint8_t *full = malloc(size);
+    if (!full) {
+        fclose(f);
+        return -1;
+    }
+
+    if (fread(full, 1, size, f) != (size_t)size) {
+        fclose(f);
+        free(full);
+        return -1;
+    }
+
     fclose(f);
 
+    // not used yet (next steps)
     (void)type_out;
     (void)data_out;
     (void)len_out;
+
+    free(full); // avoid leak for now
+
     return -1;
 }
