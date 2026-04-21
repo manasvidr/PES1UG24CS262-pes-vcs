@@ -200,7 +200,7 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     ObjectID parent_id;
     int has_parent = (head_read(&parent_id) == 0);
 
-    // 🔥 PUT YOUR CODE HERE
+    // Build commit struct
     Commit commit;
     memset(&commit, 0, sizeof(commit));
 
@@ -218,7 +218,14 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     commit.timestamp = time(NULL);
     commit.message = message;
 
-    // ⬇️ next step will go here (serialize)
+    // 🔥 STEP 4 — Serialize commit
+    void *data = NULL;
+    size_t len = 0;
+
+    if (commit_serialize(&commit, &data, &len) != 0) return -1;
+
+    // next steps will use data
+    free(data);  // temporary cleanup for this step
 
     return -1;
 }
